@@ -10,6 +10,8 @@ import java.util.Collection;
  */
 public interface MapAggregator extends DistributedObject {
 
+    public <V, T, R> R aggregateAll(Aggregator<V, T, R> aggregator);
+
     public <V, T, R> R aggregate(Predicate predicate, Aggregator<V, T, R> aggregator);
 
     public <V, T, R> R aggregate(Collection keys, Aggregator<V, T, R> aggregator);

@@ -6,27 +6,20 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
-import com.hazelcast.query.Predicates;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @ali 22/11/13
  */
 @RunWith(HazelBlockJUnit4ClassRunner.class)
-public class MainTest extends BaseTest {
+public class MainTestWithKeys extends BaseTest {
 
     @Before
     @After
@@ -49,6 +42,7 @@ public class MainTest extends BaseTest {
         int sum = 0;
         final Random random = new Random(System.currentTimeMillis());
         int id = 1;
+        Collection<Integer> keys = new ArrayList<Integer>();
         for (String school : schools) {
             for (String clazz : classes) {
                 for (int i=1; i<21; i++) {
@@ -56,14 +50,14 @@ public class MainTest extends BaseTest {
                     map.put(id++, new Student("name"+i, clazz, school, note));
                     if (school.equals("Fatih")){
                         sum += note;
+                        keys.add(id-1);
                     }
                 }
             }
         }
         System.err.println("average " + (sum/100));
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate predicate = Predicates.equal("schoolName", "Fatih");
-        final Number average = mapAggregator.aggregate(predicate, new NumberAverageAggregator("note"));
+        final Number average = mapAggregator.aggregate(keys, new NumberAverageAggregator("note"));
         assertEquals(sum, (int) (average.doubleValue() * 100));
 
     }
@@ -84,7 +78,7 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Comparable maxNote = mapAggregator.aggregate((Predicate) null, new ComparableMaxAggregator("note"));
+        final Comparable maxNote = mapAggregator.aggregate(map.keySet(), new ComparableMaxAggregator("note"));
         assertEquals(98, maxNote);
 
     }
@@ -105,7 +99,9 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Comparable minNote = mapAggregator.aggregate(Predicates.equal("className","A"), new ComparableMinAggregator("note"));
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(2);
+        final Comparable minNote = mapAggregator.aggregate(keys, new ComparableMinAggregator("note"));
         assertEquals(73, minNote);
 
     }
@@ -126,7 +122,7 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Collection aggregate = mapAggregator.aggregate((Predicate) null, new CompositeAggregator(new NumberSumAggregator("note"), new DistinctValuesAggregator("className")));
+        final Collection aggregate = mapAggregator.aggregate(map.keySet(), new CompositeAggregator(new NumberSumAggregator("note"), new DistinctValuesAggregator("className")));
         final Iterator iterator = aggregate.iterator();
         assertEquals(272, ((Number)iterator.next()).intValue());
         assertEquals(3, ((Collection)iterator.next()).size() );
@@ -134,7 +130,7 @@ public class MainTest extends BaseTest {
     }
 
     @Test
-    public void testCompositeWithPredicate(){
+    public void testCompositeWithKeys(){
         String name = "map";
         final Config config = new Config();
         config.getMapConfig(name).setInMemoryFormat(InMemoryFormat.OBJECT);
@@ -149,8 +145,9 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate equal = Predicates.equal("schoolName", "Fatih");
-        final Collection aggregate = mapAggregator.aggregate(equal, new CompositeAggregator(new NumberAverageAggregator("getNote"), new DistinctValuesAggregator("getClassName")));
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(4);
+        final Collection aggregate = mapAggregator.aggregate(keys, new CompositeAggregator(new NumberAverageAggregator("getNote"), new DistinctValuesAggregator("getClassName")));
         final Iterator iterator = aggregate.iterator();
         assertEquals(56, ((Number)iterator.next()).intValue());
         assertEquals(2, ((Collection)iterator.next()).size() );
@@ -173,9 +170,10 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate equal = Predicates.equal("schoolName", "Fatih");
-        final Integer fatih = mapAggregator.aggregate(equal, new CountAggregator());
-        final Integer all = mapAggregator.aggregate((Predicate)null, new CountAggregator());
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(4);
+        final Integer fatih = mapAggregator.aggregate(keys, new CountAggregator());
+        final Integer all = mapAggregator.aggregate(map.keySet(), new CountAggregator());
         assertEquals(2, (int)fatih);
         assertEquals(4, (int)all);
     }
@@ -197,13 +195,14 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate equal = Predicates.equal("schoolName", "Fatih");
-        final Collection fatihClasses = mapAggregator.aggregate(equal, new DistinctValuesAggregator("className"));
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(0); keys.add(4);
+        final Collection fatihClasses = mapAggregator.aggregate(keys, new DistinctValuesAggregator("className"));
         assertEquals(2, fatihClasses.size());
         assertTrue(fatihClasses.contains("A"));
         assertTrue(fatihClasses.contains("C"));
 
-        final Collection allClasses = mapAggregator.aggregateAll( new DistinctValuesAggregator("getClassName"));
+        final Collection allClasses = mapAggregator.aggregate(map.keySet(), new DistinctValuesAggregator("getClassName"));
         assertEquals(3, allClasses.size());
         assertTrue(allClasses.contains("A"));
         assertTrue(allClasses.contains("B"));
@@ -227,9 +226,10 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 14));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate equal = Predicates.equal("schoolName", "Fatih");
-        final Number fatih = mapAggregator.aggregate(equal, new NumberMaxAggregator("note"));
-        final Number all = mapAggregator.aggregateAll( new NumberMaxAggregator("getNote"));
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(4);
+        final Number fatih = mapAggregator.aggregate(keys, new NumberMaxAggregator("note"));
+        final Number all = mapAggregator.aggregate(map.keySet(), new NumberMaxAggregator("getNote"));
         assertEquals(66, fatih.intValue());
         assertEquals(87, all.intValue());
     }
@@ -250,9 +250,10 @@ public class MainTest extends BaseTest {
         map.put(4, new Student("kedi", "C", "Fatih", 74));
 
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate equal = Predicates.equal("schoolName", "Fatih");
-        final Number fatih = mapAggregator.aggregate(equal, new NumberMinAggregator("note"));
-        final Number all = mapAggregator.aggregateAll( new NumberMinAggregator("note"));
+        final HashSet keys = new HashSet();
+        keys.add(1); keys.add(4);
+        final Number fatih = mapAggregator.aggregate(keys, new NumberMinAggregator("note"));
+        final Number all = mapAggregator.aggregate(map.keySet(), new NumberMinAggregator("note"));
         assertEquals(66, fatih.intValue());
         assertEquals(45, all.intValue());
     }
@@ -272,6 +273,7 @@ public class MainTest extends BaseTest {
         int sum = 0;
         final Random random = new Random(System.currentTimeMillis());
         int id = 1;
+        Collection<Integer> keys = new ArrayList<Integer>();
         for (String school : schools) {
             for (String clazz : classes) {
                 for (int i=1; i<21; i++) {
@@ -279,13 +281,13 @@ public class MainTest extends BaseTest {
                     map.put(id++, new Student("name"+i, clazz, school, note));
                     if (school.equals("Fatih")){
                         sum += note;
+                        keys.add(id-1);
                     }
                 }
             }
         }
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate predicate = Predicates.equal("schoolName", "Fatih");
-        final Number aggregate = mapAggregator.aggregate(predicate, new NumberSumAggregator("note"));
+        final Number aggregate = mapAggregator.aggregate(keys, new NumberSumAggregator("note"));
         assertEquals(sum, aggregate.intValue());
 
     }
@@ -305,6 +307,7 @@ public class MainTest extends BaseTest {
         int sum = 0;
         final Random random = new Random(System.currentTimeMillis());
         int id = 1;
+        Collection keys = new ArrayList();
         for (String school : schools) {
             for (String clazz : classes) {
                 for (int i=1; i<21; i++) {
@@ -312,13 +315,13 @@ public class MainTest extends BaseTest {
                     map.put(id++, new Student("name"+i, clazz, school, note));
                     if (school.equals("Fatih")){
                         sum += note;
+                        keys.add(id-1);
                     }
                 }
             }
         }
         final MapAggregator mapAggregator = getMapAggregator(instance1, name);
-        final Predicate predicate = Predicates.equal("schoolName", "Fatih");
-        final Map<String, Number> classSumMap = mapAggregator.aggregate(predicate, new GroupAggregator("className", new NumberSumAggregator("getNote")));
+        final Map<String, Number> classSumMap = mapAggregator.aggregate(keys, new GroupAggregator("className", new NumberSumAggregator("getNote")));
         assertEquals(5, classSumMap.size());
         int all = classSumMap.get("A").intValue() + classSumMap.get("B").intValue() + classSumMap.get("C").intValue() +
                 classSumMap.get("D").intValue() + classSumMap.get("E").intValue();
