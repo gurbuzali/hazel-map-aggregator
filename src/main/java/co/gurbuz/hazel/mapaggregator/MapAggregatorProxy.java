@@ -28,14 +28,13 @@ public class MapAggregatorProxy extends AbstractDistributedObject<MapAggregatorS
     }
 
     public <V, T, R> R aggregateAll(Aggregator<V, T, R> aggregator) {
-        return aggregate((Predicate)null, aggregator);
+        return aggregate((Predicate) null, aggregator);
     }
 
-    public <V, T, R> R aggregate(Predicate predicate, Aggregator<V, T, R> aggregator){
+    public <V, T, R> R aggregate(Predicate predicate, Aggregator<V, T, R> aggregator) {
         NodeEngine nodeEngine = getNodeEngine();
         try {
-            Data dataAggregator = nodeEngine.toData(aggregator);
-            final Map<Integer, T> partialResultsMap = (Map<Integer, T>)nodeEngine.getOperationService()
+            final Map<Integer, T> partialResultsMap = (Map<Integer, T>) nodeEngine.getOperationService()
                     .invokeOnAllPartitions(SERVICE_NAME, new AggregateOperationFactory(name, predicate, aggregator));
             final Collection<T> nonNull = new LinkedList<T>();
             for (T t : partialResultsMap.values()) {
