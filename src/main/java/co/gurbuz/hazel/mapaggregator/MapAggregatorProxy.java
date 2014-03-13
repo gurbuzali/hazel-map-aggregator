@@ -2,14 +2,17 @@ package co.gurbuz.hazel.mapaggregator;
 
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.partition.PartitionService;
+import com.hazelcast.partition.InternalPartitionService;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.spi.AbstractDistributedObject;
-import com.hazelcast.spi.Invocation;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.util.ExceptionUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -50,7 +53,7 @@ public class MapAggregatorProxy extends AbstractDistributedObject<MapAggregatorS
 
     public <V, T, R> R aggregate(Collection keys, Aggregator<V, T, R> aggregator) {
         NodeEngine nodeEngine = getNodeEngine();
-        final PartitionService partitionService = nodeEngine.getPartitionService();
+        final InternalPartitionService partitionService = nodeEngine.getPartitionService();
         try {
             Map<Address, Collection<Data>> memberKeysMap = new HashMap<Address, Collection<Data>>();
             for (Object key : keys) {
@@ -70,8 +73,7 @@ public class MapAggregatorProxy extends AbstractDistributedObject<MapAggregatorS
                 final Address target = entry.getKey();
                 final Collection<Data> dateKeys = entry.getValue();
                 final TargetAggregateOperation operation = new TargetAggregateOperation(name, dateKeys, dataAggregator);
-                final Invocation invocation = nodeEngine.getOperationService().createInvocationBuilder(SERVICE_NAME, operation, target).build();
-                final Future<T> future = invocation.invoke();
+                final Future<T> future = nodeEngine.getOperationService().createInvocationBuilder(SERVICE_NAME, operation, target).invoke();
                 futures.add(future);
             }
 

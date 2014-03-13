@@ -5,7 +5,7 @@ import com.hazelcast.map.RecordStore;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.partition.PartitionService;
+import com.hazelcast.partition.InternalPartitionService;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.AbstractNamedOperation;
 
@@ -35,7 +35,7 @@ public class TargetAggregateOperation extends AbstractNamedOperation {
         final NodeEngine nodeEngine = getNodeEngine();
         final Aggregator aggregator = nodeEngine.toObject(dataAggregator);
         final MapService service = getService();
-        final PartitionService partitionService = nodeEngine.getPartitionService();
+        final InternalPartitionService partitionService = nodeEngine.getPartitionService();
 
         Collection values = new ArrayList();
         for (Data dataKey : dataKeys) {
@@ -66,7 +66,7 @@ public class TargetAggregateOperation extends AbstractNamedOperation {
         dataAggregator.readData(in);
         int size = in.readInt();
         dataKeys = new ArrayList<Data>(size);
-        for (int i=0; i<size; i++) {
+        for (int i = 0; i < size; i++) {
             final Data data = new Data();
             data.readData(in);
             dataKeys.add(data);
