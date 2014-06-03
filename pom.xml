@@ -10,7 +10,7 @@
 
     <properties>
         <!--<hazelcast.version>3.1.6</hazelcast.version>-->
-        <hazelcast.version>3.3-EA</hazelcast.version>
+        <hazelcast.version>3.2.2</hazelcast.version>
         <junit.version>4.11</junit.version>
     </properties>
 
