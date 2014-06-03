@@ -42,7 +42,7 @@ public class TargetAggregateOperation extends AbstractNamedOperation {
             final int partitionId = partitionService.getPartitionId(dataKey);
             final RecordStore recordStore = service.getRecordStore(partitionId, name);
             final Object value = recordStore.get(dataKey);
-            values.add(value);
+            values.add(nodeEngine.toObject(value));
         }
         response = aggregator.reduce(values);
     }
